@@ -28,8 +28,12 @@ class EventController extends Controller
     }
 
     public function edit(Event $event) {
-        return view('events.edit', compact('event'));
-    }
+    // تحميل المشاركين المرتبطين بالحدث
+    $event->load('participants');
+
+    return view('events.edit', compact('event'));
+}
+
 
     public function update(Request $request, Event $event) {
         $request->validate([

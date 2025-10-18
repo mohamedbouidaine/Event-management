@@ -24,8 +24,7 @@
             <label class="block font-semibold mb-1">Description</label>
             <textarea name="description" class="w-full border p-2 rounded">{{ $event->description }}</textarea>
         </div>
-        <button type="submit"
-                class="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 focus:bg-red-700 active:bg-red-800 transition">
+        <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 transition">
             Update Event
         </button>
     </form>
@@ -42,6 +41,12 @@
                 <li>{{ $error }}</li>
             @endforeach
         </ul>
+    </div>
+@endif
+
+@if (session('success'))
+    <div class="text-green-600 mb-4">
+        {{ session('success') }}
     </div>
 @endif
 
@@ -62,100 +67,136 @@
             value="{{ old('phone') }}">
 
         <button type="submit"
-                class="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 focus:bg-red-700 active:bg-red-800 transition">
+                class="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 transition">
             Add Participant
         </button>
     </div>
 </form>
 
-<!-- مجموعة إدارة الملفات والأزرار -->
-<div class="mb-6 space-y-2">
+<!-- رفع ملف Excel -->
+<form action="{{ route('participants.uploadExcel', $event->id) }}" method="POST" enctype="multipart/form-data" class="flex items-center gap-2 mb-4">
+    @csrf
+    <input type="file" name="file" required class="border p-2 rounded">
+    <button type="submit" class="bg-red-600 text-white font-semibold px-4 py-2 rounded shadow hover:bg-red-700 transition">
+        Upload Excel File
+    </button>
+</form>
 
-    <!-- رفع ملف Excel -->
-    <form action="{{ route('participants.uploadExcel', $event->id) }}" method="POST" enctype="multipart/form-data" class="flex items-center gap-2">
-        @csrf
-        <input type="file" name="file" required class="border p-2 rounded">
-        <button type="submit"
-                class="bg-red-600 text-white font-semibold px-4 py-2 rounded shadow hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 transition">
-            Upload Excel File
-        </button>
-    </form>
+<!-- Modal لاختيار الأعمدة -->
+@if(session()->has('first_row') && count(session('first_row')) > 0)
+    <button id="showMappingModal" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition mb-2">
+        Select Columns
+    </button>
 
-        <!-- إضافة المشاركين من الملف المرفوع -->
-        @if(session()->has('uploaded_participants') && count(session('uploaded_participants')) > 0)
-            <form action="{{ route('participants.addUploaded', $event->id) }}" method="POST" class="inline-block">
+    <div id="mappingModal" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+        <div class="bg-white p-6 rounded-2xl w-96 shadow-lg">
+            <h2 class="text-xl font-semibold mb-4 text-center text-black">Select Columns from First Row</h2>
+
+            @php $firstRow = session('first_row', []); @endphp
+
+            <form method="POST" action="{{ route('participants.mapColumns', $event->id) }}">
                 @csrf
-                <button type="submit"
-                        class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition">
-                    Add Participants from Uploaded File
+                <label>Name:</label>
+                <select name="name_value" class="w-full mb-2 p-2 border">
+                    @foreach($firstRow as $index => $cell)
+                        <option value="{{ $index }}">{{ $cell }}</option>
+                    @endforeach
+                </select>
+
+                <label>Email:</label>
+                <select name="email_value" class="w-full mb-2 p-2 border">
+                    @foreach($firstRow as $index => $cell)
+                        <option value="{{ $index }}">{{ $cell }}</option>
+                    @endforeach
+                </select>
+
+                <label>Phone:</label>
+                <select name="phone_value" class="w-full mb-4 p-2 border">
+                    @foreach($firstRow as $index => $cell)
+                        <option value="{{ $index }}">{{ $cell }}</option>
+                    @endforeach
+                </select>
+
+                <button type="submit" class="w-full bg-gray-500 text-white py-2 rounded mb-2">
+                    Save Column Mapping
                 </button>
             </form>
-        @endif
 
+            @if(session()->has('column_mapping') && count(session('uploaded_rows', [])) > 0)
+                <form action="{{ route('participants.addMappedParticipants', $event->id) }}" method="POST">
+                    @csrf
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded">
+                        Add Participants Based on Mapping
+                    </button>
+                </form>
+            @endif
 
+            <button type="button" id="closeMappingModal" class="w-full mt-2 bg-gray-500 text-white py-2 rounded">
+                Cancel
+            </button>
+        </div>
+    </div>
 
+    <script>
+        const showBtn = document.getElementById('showMappingModal');
+        const closeBtn = document.getElementById('closeMappingModal');
+        const modal = document.getElementById('mappingModal');
 
+        showBtn.addEventListener('click', () => {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        });
 
+        closeBtn.addEventListener('click', () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        });
+    </script>
+@endif
 
-    <!-- تحميل جميع المشاركين كملف Excel -->
-    <a href="{{ route('participants.export', $event->id) }}"
-       class="bg-red-600 text-white font-semibold px-4 py-2 rounded shadow hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 transition inline-block">
+<!-- تنزيل Excel أو PDF -->
+<div class="flex gap-2 mt-4 mb-4">
+    <a href="{{ route('participants.export', $event->id) }}" class="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700">
         Download Participants Excel
     </a>
 
-    <!-- تصدير PDF -->
-    <a href="{{ route('events.pdf', $event->id) }}" target="_blank"
-       class="bg-red-600 text-white font-semibold px-4 py-2 rounded shadow hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 transition inline-block">
+    <a href="{{ route('events.pdf', $event->id) }}" target="_blank" class="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700">
         Export PDF Participants
     </a>
 
-    <!-- حذف جميع المشاركين -->
     <form action="{{ route('participants.destroyAll', $event->id) }}" method="POST" class="inline-block">
         @csrf
         @method('DELETE')
-        <button type="submit"
-                class="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 transition">
+        <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700" onclick="return confirm('Are you sure you want to remove all participants?');">
             Remove All Participants
         </button>
     </form>
-
 </div>
 
-
-
-
-
-
-<!-- قائمة المشاركين مع QR Code بجانب زر Remove -->
+<!-- قائمة المشاركين -->
 <ul class="mt-4 border rounded divide-y">
-@foreach($event->participants as $participant)
-    <li class="flex justify-between items-center p-2">
-        <div>
-            <strong>{{ $participant->name }}</strong> ({{ $participant->email }})
-            @if($participant->phone)
-                - {{ $participant->phone }}
-            @else
-                - No phone
-            @endif
-        </div>
-
-        <div class="flex items-center gap-2">
-            {{-- زر إزالة المشارك --}}
-            <form action="{{ route('participants.destroy', [$event->id, $participant->id]) }}" method="POST">
-                @csrf
-                @method('DELETE')
-                <button type="submit"
-                        class="bg-red-600 text-white px-2 py-1 rounded shadow hover:bg-red-700 focus:bg-red-700 active:bg-red-800 transition">
-                    Remove
-                </button>
-            </form>
-
-
-            {{-- QR Code بجانب زر Remove --}}
-            <div>{!! QrCode::size(80)->generate($participant->email) !!}</div>
-        </div>
-    </li>
-@endforeach
+    @foreach($event->participants as $participant)
+        <li class="flex justify-between items-center p-2">
+            <div>
+                <strong>{{ $participant->name }}</strong> ({{ $participant->email }})
+                @if($participant->phone)
+                    - {{ $participant->phone }}
+                @else
+                    - No phone
+                @endif
+            </div>
+            <div class="flex items-center gap-2">
+                <form action="{{ route('participants.destroy', [$event->id, $participant->id]) }}" method="POST">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="bg-red-600 text-white px-2 py-1 rounded shadow hover:bg-red-700">
+                        Remove
+                    </button>
+                </form>
+            </div>
+        </li>
+    @endforeach
 </ul>
+
 </div>
 @endsection

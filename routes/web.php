@@ -11,11 +11,12 @@ Route::get('/', function () {
     return redirect()->route('events.index');
 });
 
+// توجيه لوحة التحكم
 Route::get('/dashboard', function () {
     return redirect()->route('events.index');
 })->middleware(['auth'])->name('dashboard');
 
-// جميع الـ routes الخاصة بالمستخدمين مسموح بها بعد تسجيل الدخول
+// جميع الـ routes بعد تسجيل الدخول
 Route::middleware(['auth'])->group(function () {
 
     // Events CRUD
@@ -31,22 +32,34 @@ Route::middleware(['auth'])->group(function () {
 
         // إضافة مشارك يدويًا
         Route::post('/', [ParticipantController::class, 'store'])->name('participants.store');
-
         // حذف جميع المشاركين
         Route::delete('/delete-all', [ParticipantController::class, 'destroyAll'])->name('participants.destroyAll');
-
         // حذف مشارك واحد
         Route::delete('/{participant}', [ParticipantController::class, 'destroy'])->name('participants.destroy');
+
+
 
         // رفع Excel وحفظ مؤقت في session
         Route::post('/upload', [ParticipantController::class, 'uploadExcel'])->name('participants.uploadExcel');
 
-        // إضافة المشاركين من الملف المرفوع إلى DB
-        Route::post('/add-uploaded', [ParticipantController::class, 'addUploadedParticipants'])->name('participants.addUploaded');
+        // إضافة المشاركين من الملف المرفوع إلى DB مباشرة
+        Route::post('/add-uploaded', [ParticipantController::class, 'addUploadedParticipants'])
+            ->name('participants.addUploaded');
 
-        // استيراد Excel مباشر (اختياري)
-        Route::post('/import-excel', [ParticipantController::class, 'importExcel'])->name('participants.importExcel');
+        // رفع Excel واختيار الأعمدة يدوياً (اختياري)
+        Route::post('/upload-manual', [ParticipantController::class, 'uploadExcelManual'])->name('participants.uploadExcelManual');
 
+        // عرض Modal أو صفحة لاختيار الأعمدة يدوياً
+        Route::get('/select-columns-manual', [ParticipantController::class, 'selectColumnsManual'])->name('participants.selectColumnsManual');
+
+        // حفظ الأعمدة المختارة يدوياً
+        Route::post('/save-selected-participants', [ParticipantController::class, 'saveSelectedParticipants'])->name('participants.saveSelectedParticipants');
+
+        // حفظ الأعمدة التي اختارها المستخدم (Map Columns)
+        Route::post('/map-columns', [ParticipantController::class, 'mapColumns'])->name('participants.mapColumns');
+
+        // إضافة جميع المشاركين بناءً على الأعمدة المحددة
+        Route::post('/add-mapped', [ParticipantController::class, 'addMappedParticipants'])->name('participants.addMappedParticipants');
 
     });
 
@@ -57,10 +70,14 @@ Route::middleware(['auth'])->group(function () {
     // تصدير PDF
     Route::get('/events/{event}/pdf', [ParticipantPDFController::class, 'exportPdf'])->name('events.pdf');
 
+    // تحديث مشارك فردي
+    Route::post('/participants/update/{id}', [ParticipantController::class, 'updateParticipant'])->name('participants.update');
+
     // Profile routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
 });
 
 // Breeze auth routes
