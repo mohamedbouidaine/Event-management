@@ -33,6 +33,22 @@ class ParticipantController extends Controller
                         ->with('success', 'Participant added successfully with QR Code!');
     }
 
+    public function update(Request $request, Event $event, Participant $participant)
+    {
+        $validated = $request->validate([
+            'name'  => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        $participant->update($validated);
+
+        return response()->json($participant);
+    }
+
+
+
+
     // حذف جميع المشاركين للحدث الحالي
     public function destroyAll(Event $event){
         $event->participants()->delete();
@@ -150,13 +166,14 @@ class ParticipantController extends Controller
 
         // ✅ تحقق من وجود بيانات في الملف
         if (count($rows) < 2) {
-            return redirect()->back()->withErrors('الملف يجب أن يحتوي على صفوف بيانات بعد الصف الأول (رؤوس الأعمدة).');
+            return redirect()->back()->withErrors('The file must contain data rows after the first row (column headers).');
         }
 
 
         session([
             'uploaded_rows' => $rows,
             'first_row' => $rows[1],
+            // أول صف (رؤوس الأعمدة)
         ]);
 
         return redirect()->back()->with('success', 'File uploaded successfully. Please map the columns to add participants.');

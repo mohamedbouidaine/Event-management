@@ -7,49 +7,94 @@ use Illuminate\Http\Request;
 
 class EventController extends Controller
 {
-    public function index() {
+    // عرض جميع الأحداث
+    public function index()
+    {
         $events = Event::all();
         return view('events.index', compact('events'));
     }
 
-    public function create() {
+    // صفحة إنشاء حدث جديد
+    public function create()
+    {
         return view('events.create');
     }
 
-    public function store(Request $request) {
+    // تخزين حدث جديد
+    public function store(Request $request)
+    {
         $request->validate([
-            'title' => 'required',
-            'description' => 'required',
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
             'date' => 'required|date',
+            'location' => 'nullable|string|max:255',
         ]);
 
-        Event::create($request->all());
-        return redirect()->route('events.index');
+        $event = Event::create($request->all());
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Event created successfully!',
+                'event' => $event
+            ]);
+        }
+
+        return redirect()->route('events.index')->with('success', 'Event created successfully!');
     }
 
-    public function edit(Event $event) {
-    // تحميل المشاركين المرتبطين بالحدث
-    $event->load('participants');
+    // صفحة تعديل الحدث
+    public function edit(Event $event)
+    {
+        $event->load('participants');
+        return view('events.edit', compact('event'));
+    }
 
-    return view('events.edit', compact('event'));
-}
-
-
-    public function update(Request $request, Event $event) {
+    // تحديث الحدث
+    public function update(Request $request, Event $event)
+    {
         $request->validate([
-            'title' => 'required',
-            'description' => 'required',
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
             'date' => 'required|date',
+            'location' => 'nullable|string|max:255',
         ]);
 
         $event->update($request->all());
-        return redirect()->route('events.index');
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Event updated successfully!',
+                'event' => $event
+            ]);
+        }
+
+        return redirect()->route('events.index')->with('success', 'Event updated successfully!');
     }
 
-    // ← إضافة هذه الدالة
-    public function destroy(Event $event)
+    public function participants(Event $event)
+{
+    // افترض أن لديك علاقة participants في نموذج Event
+    $participants = $event->participants;
+
+    // عرض صفحة المشاركين
+    return view('events.participants', compact('event', 'participants'));
+}
+
+
+    // حذف الحدث
+    public function destroy(Request $request, Event $event)
     {
         $event->delete();
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Event deleted successfully!'
+            ]);
+        }
+
         return redirect()->route('events.index')->with('success', 'Event deleted successfully.');
     }
 }

@@ -21,4 +21,42 @@
         <a href="{{ route('events.edit', $event) }}" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 focus:bg-red-600 active:bg-red-700 transition">Manage Event</a>
     </div>
 </div>
+
+<!-- AJAX Script - ضع هذا قبل نهاية @endsection -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#addParticipant').click(function(e) {
+        e.preventDefault();
+
+        var name = $('#name').val();
+        var email = $('#email').val();
+        var event_id = '{{ $event->id }}'; // معرف الحدث
+
+        $.ajax({
+            url: '{{ route("participants.store") }}', // تأكد من الـ route الصحيح
+            type: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                event_id: event_id,
+                name: name,
+                email: email
+            },
+            success: function(response) {
+                // تحديث قائمة المشاركين إذا كانت موجودة
+                if($('#participantsList').length) {
+                    $('#participantsList').append('<li>' + response.name + ' - ' + response.email + '</li>');
+                }
+                // مسح الحقول بعد الإضافة
+                $('#name').val('');
+                $('#email').val('');
+            },
+            error: function(xhr) {
+                alert('حدث خطأ: ' + xhr.responseText);
+            }
+        });
+    });
+});
+</script>
+
 @endsection
